@@ -80,6 +80,7 @@ echo [5/6] Compilando o executavel (.exe)... aguarde, pode levar alguns minutos.
   --collect-all pdfminer ^
   --collect-all openpyxl ^
   --collect-all fpdf ^
+  --collect-all pyautogui ^
   app.py >> "%LOG%" 2>&1
 if errorlevel 1 goto erro
 

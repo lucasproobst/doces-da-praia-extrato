@@ -101,6 +101,32 @@ Se algo der errado, abra esses arquivos — eles dizem o motivo.
 
 ---
 
+## ⌨️ Lançar no Telecon (digitação automática)
+
+Como o Telecon só aceita **digitação manual**, o app traz um **robô** que digita
+cada PIX na tela de novo lançamento, por você.
+
+**Como usar:**
+1. Processe o extrato no app.
+2. Abra o **Telecon** na tela de **novo lançamento** (cursor no primeiro campo).
+3. No app, clique em **“Lançar no Telecon”** → escolha **Testar com 1** (recomendado
+   na primeira vez) ou **Lançar todos**.
+4. Durante a **contagem regressiva**, clique na janela do Telecon. O robô preenche
+   sozinho, bem rápido.
+5. **Abortar a qualquer momento:** jogue o **mouse para o canto superior esquerdo**
+   da tela.
+
+**Ajuste para a SUA tela do Telecon** (em `extrato_pix/config.py`, seção 7):
+- `TELECON_SEQUENCIA` — a ordem dos campos (ex.: valor → Tab → descrição → Enter).
+- `TELECON_FORMATO_VALOR` — como o valor é digitado (`1234,56`, `1.234,56` ou `1234.56`).
+- `TELECON_METODO` — `"colar"` (rápido, recomendado) ou `"digitar"`.
+- `TELECON_PAUSA_*` — velocidades (aumente se o Telecon “perder” caracteres).
+
+> ⚠️ É uma automação que **digita na tela**: depende da ordem dos campos do seu
+> Telecon. **Sempre teste com 1 lançamento** e confira antes de soltar a lista toda.
+
+---
+
 ## 📁 Estrutura do projeto
 
 ```
@@ -198,6 +224,7 @@ pyinstaller --noconfirm --onefile --windowed ^
   --collect-all pdfminer ^
   --collect-all openpyxl ^
   --collect-all fpdf ^
+  --collect-all pyautogui ^
   app.py
 ```
 

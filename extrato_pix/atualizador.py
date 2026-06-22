@@ -73,8 +73,22 @@ def _salvar_versao_local(sha):
         log.exception("Não foi possível salvar a versão instalada")
 
 
+def _eh_repositorio_git():
+    """True se a pasta do projeto é um repositório git (ambiente de
+    desenvolvimento). Nesse caso NÃO auto-atualizamos, para não sobrescrever
+    alterações locais ainda não publicadas. A instalação do usuário final não
+    tem .git, então lá a atualização funciona normalmente."""
+    return os.path.isdir(os.path.join(_raiz_projeto(), ".git"))
+
+
 def _configurado():
-    return bool(UPDATE_ATIVO and UPDATE_REPO and "/" in UPDATE_REPO)
+    return bool(
+        UPDATE_ATIVO
+        and UPDATE_REPO
+        and "/" in UPDATE_REPO
+        and not _rodando_empacotado()
+        and not _eh_repositorio_git()
+    )
 
 
 def verificar(timeout=8):

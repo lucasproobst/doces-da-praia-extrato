@@ -33,6 +33,8 @@ except Exception as erro:  # pragma: no cover
 
 from extrato_pix import __app_name__, __version__
 from extrato_pix import atualizador
+from extrato_pix import config
+from extrato_pix import digitador
 from extrato_pix.extrator import processar_arquivo
 from extrato_pix.exportar import exportar
 from extrato_pix.leitores import formatos_suportados
@@ -213,7 +215,21 @@ class AppExtrato(ctk.CTk):
             command=self.exportar_resultado,
             state="disabled",
         )
-        self.botao_exportar.grid(row=2, column=0, sticky="ew", padx=22, pady=(0, 14))
+        self.botao_exportar.grid(row=2, column=0, sticky="ew", padx=22, pady=(0, 10))
+
+        self.botao_telecon = ctk.CTkButton(
+            cartao,
+            text="⌨️   Lançar no Telecon",
+            height=48,
+            corner_radius=12,
+            fg_color="#7C3AED",
+            hover_color="#6D28D9",
+            text_color=BRANCO,
+            font=ctk.CTkFont(size=15, weight="bold"),
+            command=self.abrir_telecon,
+            state="disabled",
+        )
+        self.botao_telecon.grid(row=3, column=0, sticky="ew", padx=22, pady=(0, 14))
 
         formatos = ", ".join(e.replace(".", "").upper() for e in formatos_suportados())
         ctk.CTkLabel(
@@ -222,7 +238,7 @@ class AppExtrato(ctk.CTk):
             font=ctk.CTkFont(size=11),
             text_color=TEXTO_SUAVE,
             justify="left",
-        ).grid(row=3, column=0, sticky="w", padx=22, pady=(0, 6))
+        ).grid(row=4, column=0, sticky="w", padx=22, pady=(0, 6))
 
         self.rotulo_arquivo = ctk.CTkLabel(
             cartao,
@@ -232,7 +248,7 @@ class AppExtrato(ctk.CTk):
             wraplength=240,
             justify="left",
         )
-        self.rotulo_arquivo.grid(row=4, column=0, sticky="w", padx=22, pady=(0, 20))
+        self.rotulo_arquivo.grid(row=5, column=0, sticky="w", padx=22, pady=(0, 20))
 
     def _montar_cartao_total(self, mae):
         cartao = ctk.CTkFrame(mae, fg_color=OCEANO_FUNDO, corner_radius=18)
@@ -444,7 +460,9 @@ class AppExtrato(ctk.CTk):
             )
 
         self._atualizar_total(resultado.total, resultado.quantidade)
-        self.botao_exportar.configure(state="normal" if resultado.quantidade else "disabled")
+        estado = "normal" if resultado.quantidade else "disabled"
+        self.botao_exportar.configure(state=estado)
+        self.botao_telecon.configure(state=estado)
 
         if resultado.quantidade == 0:
             self._definir_status(
@@ -528,6 +546,132 @@ class AppExtrato(ctk.CTk):
                 f"Um registro do erro foi salvo em:\n{CAMINHO_LOG}",
                 parent=self,
             )
+
+    # =======================================================================
+    # LANÇAR NO TELECON (robô de digitação)
+    # =======================================================================
+    def abrir_telecon(self):
+        """Abre o painel que explica e inicia o lançamento automático."""
+        if not self.resultado or not self.resultado.transacoes:
+            messagebox.showinfo(
+                "Lançar no Telecon",
+                "Não há lançamentos. Selecione um extrato primeiro.",
+                parent=self,
+            )
+            return
+
+        total = self.resultado.quantidade
+        janela = ctk.CTkToplevel(self)
+        janela.title("Lançar no Telecon")
+        janela.geometry("560x430")
+        janela.transient(self)
+        janela.after(50, janela.lift)
+        janela.after(80, janela.grab_set)
+
+        ctk.CTkLabel(
+            janela, text="⌨️  Lançar no Telecon",
+            font=ctk.CTkFont(size=20, weight="bold"),
+        ).pack(pady=(20, 6))
+
+        instrucoes = (
+            "O robô vai DIGITAR cada PIX na tela de novo lançamento do Telecon.\n\n"
+            "Antes de começar:\n"
+            "1) Abra o Telecon na tela de NOVO LANÇAMENTO, com o cursor no\n"
+            "    primeiro campo.\n"
+            "2) Escolha abaixo. Vai aparecer uma contagem regressiva — nesse\n"
+            "    tempo, CLIQUE na janela do Telecon.\n\n"
+            "⚠️  Para ABORTAR a qualquer momento, jogue o mouse para o\n"
+            "     CANTO SUPERIOR ESQUERDO da tela.\n\n"
+            "Dica: teste com 1 lançamento primeiro e confira no Telecon antes\n"
+            "de lançar a lista inteira."
+        )
+        ctk.CTkLabel(
+            janela, text=instrucoes, justify="left",
+            font=ctk.CTkFont(size=13), text_color=TEXTO,
+        ).pack(padx=24, pady=4, anchor="w")
+
+        botoes = ctk.CTkFrame(janela, fg_color="transparent")
+        botoes.pack(pady=16)
+
+        primeira = [self.resultado.transacoes[0]]
+        todas = list(self.resultado.transacoes)
+
+        ctk.CTkButton(
+            botoes, text="🧪  Testar com 1", width=150, height=44, corner_radius=12,
+            fg_color=OCEANO, hover_color=OCEANO_HOVER,
+            command=lambda: self._preparar_lancamento(janela, primeira),
+        ).grid(row=0, column=0, padx=6)
+
+        ctk.CTkButton(
+            botoes, text=f"🚀  Lançar todos ({total})", width=180, height=44,
+            corner_radius=12, fg_color="#7C3AED", hover_color="#6D28D9",
+            command=lambda: self._preparar_lancamento(janela, todas),
+        ).grid(row=0, column=1, padx=6)
+
+        ctk.CTkButton(
+            botoes, text="Cancelar", width=110, height=44, corner_radius=12,
+            fg_color="#94A3B8", hover_color="#64748B",
+            command=janela.destroy,
+        ).grid(row=0, column=2, padx=6)
+
+    def _preparar_lancamento(self, janela, transacoes):
+        janela.destroy()
+        self._travar_botoes(True)
+        self._contagem_telecon(int(config.TELECON_CONTAGEM_REGRESSIVA), transacoes)
+
+    def _contagem_telecon(self, segundos, transacoes):
+        if segundos > 0:
+            self._definir_status(
+                f"➡️  Vá para o TELECON agora! Começando em {segundos}s…  "
+                "(mouse no canto p/ abortar)"
+            )
+            self.after(1000, lambda: self._contagem_telecon(segundos - 1, transacoes))
+            return
+        self._definir_status("Lançando no Telecon…")
+        threading.Thread(
+            target=self._rodar_lancamento, args=(transacoes,), daemon=True
+        ).start()
+
+    def _rodar_lancamento(self, transacoes):
+        def progresso(indice, total):
+            self.after(0, lambda: self._definir_status(
+                f"Lançando no Telecon… {indice}/{total}"
+            ))
+        try:
+            feitos = digitador.lancar_varios(transacoes, ao_progredir=progresso)
+            self.after(0, lambda: self._fim_lancamento(feitos, len(transacoes)))
+        except digitador.RoboIndisponivelError as erro:
+            mensagem = str(erro)
+            self.after(0, lambda: self._erro_telecon(mensagem))
+        except Exception as erro:
+            log.exception("Erro no lançamento automático")
+            mensagem = str(erro)
+            self.after(0, lambda: self._erro_telecon(mensagem))
+
+    def _fim_lancamento(self, feitos, total):
+        self._travar_botoes(False)
+        self._definir_status(f"✓ Lançamento concluído: {feitos}/{total} enviados ao Telecon.")
+        messagebox.showinfo(
+            "Lançamento concluído",
+            f"Foram lançados {feitos} de {total} no Telecon.\n\n"
+            "Confira no Telecon se ficou tudo certo.",
+            parent=self,
+        )
+
+    def _erro_telecon(self, mensagem):
+        self._travar_botoes(False)
+        self._definir_status("Não foi possível lançar no Telecon.")
+        messagebox.showerror(
+            "Lançar no Telecon",
+            f"{mensagem}\n\nUm registro foi salvo em:\n{CAMINHO_LOG}",
+            parent=self,
+        )
+
+    def _travar_botoes(self, travar):
+        estado = "disabled" if travar else "normal"
+        self.botao_selecionar.configure(state="disabled" if travar else "normal")
+        self.botao_exportar.configure(state=estado)
+        self.botao_telecon.configure(state=estado)
 
     # =======================================================================
     # AUXILIARES DE INTERFACE
