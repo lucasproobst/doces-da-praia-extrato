@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 
 from .config import (
     TELECON_DATA_BASE,
+    TELECON_PAUSA_DATA,
     TELECON_FORMATO_VALOR,
     TELECON_MACRO,
     TELECON_METODO,
@@ -187,7 +188,10 @@ def _executar_acao(pyautogui, pyperclip, pontos, acao, transacao):
     elif tipo == "data_anterior":
         digitos = _data_anterior_digitos(transacao.descricao)
         if digitos:
-            pyautogui.write(digitos, interval=0.05)
+            # digita número por número, devagar, para o campo de data não se perder
+            for caractere in digitos:
+                pyautogui.press(caractere)
+                time.sleep(TELECON_PAUSA_DATA)
     elif tipo == "clicar":
         ponto = _exigir_ponto(pontos, valor)
         pyautogui.click(ponto[0], ponto[1])

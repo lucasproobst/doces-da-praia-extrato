@@ -143,6 +143,10 @@ TELECON_MACRO = [
 #   "extrato" -> a data da linha do extrato menos 1 dia
 TELECON_DATA_BASE = "hoje"
 
+# Pausa (segundos) entre cada NÚMERO da data. Aumente se a data sair errada
+# (campo "se perde" quando digita rápido). Diminua para ir mais rápido.
+TELECON_PAUSA_DATA = 0.18
+
 # Como o valor é digitado:  "1234,56" | "1.234,56" | "1234.56"
 TELECON_FORMATO_VALOR = "1234,56"
 
