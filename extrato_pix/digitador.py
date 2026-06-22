@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 
 from .config import (
     TELECON_DATA_BASE,
+    TELECON_DATA_MODO,
     TELECON_PAUSA_DATA,
     TELECON_FORMATO_VALOR,
     TELECON_MACRO,
@@ -187,8 +188,10 @@ def _executar_acao(pyautogui, pyperclip, pontos, acao, transacao):
             pyautogui.hotkey(*teclas)
     elif tipo == "data_anterior":
         digitos = _data_anterior_digitos(transacao.descricao)
+        if digitos and TELECON_DATA_MODO == "dia":
+            digitos = digitos[:2]   # só o DIA (mês/ano ficam como estão)
         if digitos:
-            # digita número por número, devagar, para o campo de data não se perder
+            # digita número por número, devagar, para o campo não se perder
             for caractere in digitos:
                 pyautogui.press(caractere)
                 time.sleep(TELECON_PAUSA_DATA)

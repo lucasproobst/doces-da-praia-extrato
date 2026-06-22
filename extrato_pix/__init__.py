@@ -13,5 +13,5 @@ Organização (cada arquivo tem UMA responsabilidade, para facilitar ajustes):
 Para adaptar ao formato do SEU banco, normalmente basta editar 'config.py'.
 """
 
-__version__ = "1.7.1"
+__version__ = "1.7.2"
 __app_name__ = "Doces da Praia - Calcular Extrato"

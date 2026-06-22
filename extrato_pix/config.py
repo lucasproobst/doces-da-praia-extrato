@@ -143,6 +143,13 @@ TELECON_MACRO = [
 #   "extrato" -> a data da linha do extrato menos 1 dia
 TELECON_DATA_BASE = "hoje"
 
+# O que o robô digita no campo de data:
+#   "dia"      -> muda SÓ o dia (mês e ano ficam como já estão) [padrão]
+#   "completa" -> digita a data inteira (dia, mês e ano)
+# Obs.: como o campo não "anda" sozinho entre dia/mês/ano, o modo "dia" é o
+#       mais seguro (o sistema já mostra o mês/ano corretos por padrão).
+TELECON_DATA_MODO = "dia"
+
 # Pausa (segundos) entre cada NÚMERO da data. Aumente se a data sair errada
 # (campo "se perde" quando digita rápido). Diminua para ir mais rápido.
 TELECON_PAUSA_DATA = 0.18
