@@ -84,46 +84,54 @@ UPDATE_BRANCH = "main"
 # Como há CLIQUES em ícones, o robô usa "pontos calibrados": você ENSINA uma
 # vez onde fica cada ponto (botão "Calibrar" no app), e ele repete sozinho.
 
-# Pontos que você vai calibrar (ensinar a posição na tela). Liste aqui só os
-# que a sua MACRO usa em ("clicar", "..."). As posições são gravadas pelo app.
-TELECON_PONTOS = ["flechas", "transferir_para", "item_banrisul", "valor", "gravar"]
+# Pontos que você vai calibrar (ensinar a posição na tela). Como a tela volta
+# ao topo após Gravar, abrimos a transferência por uma conta SEMPRE VISÍVEL no
+# topo e escolhemos "Transferir de = CARTÕES A RECEBER" pelo dropdown (assim
+# nunca é preciso rolar).
+TELECON_PONTOS = [
+    "flechas", "transferir_de", "item_cartoes",
+    "transferir_para", "item_banrisul",
+    "campo_data", "valor", "gravar",
+]
 
 # Nomes amigáveis mostrados na hora de calibrar cada ponto.
 TELECON_PONTOS_NOMES = {
-    "flechas": "o ÍCONE DE FLECHAS (transferência) na linha CARTÕES A RECEBER",
+    "flechas": "o ÍCONE DE FLECHAS de uma conta SEMPRE VISÍVEL no topo "
+               "(ex.: EMPRESA LUCAS PROBST) — assim não precisa rolar",
+    "transferir_de": "o campo 'Transferir de' (clique na SETINHA do dropdown)",
+    "item_cartoes": "a opção CARTÕES A RECEBER na lista que abre do 'Transferir de'",
     "transferir_para": "o campo 'Transferir para' (clique na SETINHA do dropdown)",
-    "item_banrisul": "a opção BANRISUL na lista que abre do dropdown",
+    "item_banrisul": "a opção BANRISUL na lista que abre do 'Transferir para'",
+    "campo_data": "o campo DATA — clique EM CIMA DO DIA (os 2 primeiros números)",
     "valor": "o campo VALOR (onde aparece 0,00)",
     "gravar": "o botão GRAVAR",
 }
 
-# MACRO repetida para CADA PIX (fluxo de Transferência entre Contas):
-#   ("clicar", "nome")    -> clica num ponto calibrado
-#   ("hotkey", "ctrl+a")  -> combinação de teclas (ex.: selecionar tudo)
-#   ("tecla", "tab")      -> aperta uma tecla (tab, enter, esc, ...)
-#   ("campo", "valor")    -> escreve o valor do PIX
-#   ("campo", "data")     -> escreve a data do PIX (extraída da linha)
-#   ("texto", "ABC")      -> escreve um texto fixo
-#   ("scroll", -500)      -> rola a tela (negativo = para baixo)
-#   ("esperar", 0.6)      -> espera X segundos
+# MACRO repetida para CADA PIX (Transferência CARTÕES A RECEBER -> BANRISUL).
+# Ações: ("clicar","ponto") | ("data_anterior","") | ("campo","valor") |
+#        ("hotkey","ctrl+a") | ("tecla","tab") | ("texto","ABC") | ("esperar",0.5)
 #
-# Observações deste fluxo:
-#   - "Transferir de" já vem como CARTÕES A RECEBER (porque abrimos pela linha).
-#   - A DATA fica no padrão do sistema (não mexemos). Se precisar digitar a data
-#     do PIX, acrescente ("clicar","campo_data") + ("campo","data") e calibre.
+# "data_anterior" digita a data do extrato MENOS 1 DIA (ex.: extrato 22/06 -> 21/06).
 TELECON_MACRO = [
     ("clicar", "flechas"),          # abre "Transferência entre Contas"
-    ("esperar", 0.8),
-    ("clicar", "transferir_para"),  # abre o dropdown da conta de destino
+    ("esperar", 0.9),
+    ("clicar", "transferir_de"),    # abre dropdown da conta de ORIGEM
+    ("esperar", 0.4),
+    ("clicar", "item_cartoes"),     # escolhe CARTÕES A RECEBER
+    ("esperar", 0.3),
+    ("clicar", "transferir_para"),  # abre dropdown da conta de DESTINO
     ("esperar", 0.4),
     ("clicar", "item_banrisul"),    # escolhe BANRISUL
     ("esperar", 0.3),
+    ("clicar", "campo_data"),       # foca a DATA no segmento do DIA
+    ("data_anterior", ""),          # digita (data do extrato - 1 dia)
+    ("esperar", 0.2),
     ("clicar", "valor"),            # foca o campo do valor
     ("hotkey", "ctrl+a"),           # seleciona o 0,00 que está lá
     ("campo", "valor"),             # escreve o valor do PIX (substitui)
     ("esperar", 0.2),
     ("clicar", "gravar"),           # grava (a janela fecha)
-    ("esperar", 1.0),               # espera fechar antes do próximo
+    ("esperar", 1.1),               # espera fechar antes do próximo
 ]
 
 # Como o valor é digitado:  "1234,56" | "1.234,56" | "1234.56"

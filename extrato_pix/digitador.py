@@ -20,6 +20,7 @@ import json
 import os
 import re
 import time
+from datetime import datetime, timedelta
 
 from .config import (
     TELECON_FORMATO_VALOR,
@@ -112,6 +113,24 @@ def _extrair_data(descricao):
     return achado.group(1) if achado else ""
 
 
+def _data_menos_um_digitos(descricao):
+    """Data da linha MENOS 1 dia, só com dígitos (ddmmaaaa) para digitar.
+    Ex.: '22/06/2026' -> '21062026'. Retorna '' se não houver data."""
+    texto = _extrair_data(descricao)
+    if not texto:
+        return ""
+    data = None
+    for formato in ("%d/%m/%Y", "%d/%m/%y"):
+        try:
+            data = datetime.strptime(texto, formato)
+            break
+        except ValueError:
+            continue
+    if data is None:
+        return ""
+    return (data - timedelta(days=1)).strftime("%d%m%Y")
+
+
 def _texto_do_campo(qual, transacao):
     if qual == "valor":
         return _formatar_valor(transacao.valor)
@@ -147,6 +166,10 @@ def _executar_acao(pyautogui, pyperclip, pontos, acao, transacao):
         teclas = [t.strip().lower() for t in str(valor).replace("+", ",").split(",") if t.strip()]
         if teclas:
             pyautogui.hotkey(*teclas)
+    elif tipo == "data_anterior":
+        digitos = _data_menos_um_digitos(transacao.descricao)
+        if digitos:
+            pyautogui.write(digitos, interval=0.03)
     elif tipo == "clicar":
         ponto = pontos.get(valor)
         if not ponto:
