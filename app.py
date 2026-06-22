@@ -647,8 +647,13 @@ class AppExtrato(ctk.CTk):
         self._contagem_telecon(int(config.TELECON_CONTAGEM_REGRESSIVA), transacoes)
 
     def _calibrar_telecon(self):
-        """Ensina ao robô a posição de cada ponto (mouse + ESPAÇO)."""
-        pontos = list(config.TELECON_PONTOS)
+        """Ensina ao robô a posição de cada ponto (mouse + ESPAÇO).
+
+        Calibra APENAS os pontos que ainda faltam (assim, ao adicionar um ponto
+        novo, você só ensina esse). Se já estiver tudo calibrado, recalibra tudo.
+        """
+        faltando = digitador.pontos_faltando()
+        pontos = faltando if faltando else list(config.TELECON_PONTOS)
         if not pontos:
             messagebox.showinfo("Calibrar", "Não há pontos para calibrar.", parent=self)
             return

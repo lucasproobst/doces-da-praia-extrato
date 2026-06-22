@@ -23,6 +23,7 @@ import time
 from datetime import datetime, timedelta
 
 from .config import (
+    TELECON_DATA_BASE,
     TELECON_FORMATO_VALOR,
     TELECON_MACRO,
     TELECON_METODO,
@@ -113,22 +114,30 @@ def _extrair_data(descricao):
     return achado.group(1) if achado else ""
 
 
-def _data_menos_um_digitos(descricao):
-    """Data da linha MENOS 1 dia, só com dígitos (ddmmaaaa) para digitar.
-    Ex.: '22/06/2026' -> '21062026'. Retorna '' se não houver data."""
-    texto = _extrair_data(descricao)
-    if not texto:
-        return ""
-    data = None
-    for formato in ("%d/%m/%Y", "%d/%m/%y"):
-        try:
-            data = datetime.strptime(texto, formato)
-            break
-        except ValueError:
-            continue
-    if data is None:
-        return ""
-    return (data - timedelta(days=1)).strftime("%d%m%Y")
+def _data_anterior_digitos(descricao):
+    """Data a ser digitada (sempre 1 dia ANTES), só com dígitos (ddmmaaaa).
+
+    Conforme config.TELECON_DATA_BASE:
+      "hoje"    -> data de hoje menos 1 dia (padrão)
+      "extrato" -> data da linha do extrato menos 1 dia
+    Ex.: hoje 22/06/2026 -> '21062026'.
+    """
+    if TELECON_DATA_BASE == "extrato":
+        texto = _extrair_data(descricao)
+        if not texto:
+            return ""
+        base = None
+        for formato in ("%d/%m/%Y", "%d/%m/%y"):
+            try:
+                base = datetime.strptime(texto, formato)
+                break
+            except ValueError:
+                continue
+        if base is None:
+            return ""
+    else:  # "hoje" (padrão)
+        base = datetime.now()
+    return (base - timedelta(days=1)).strftime("%d%m%Y")
 
 
 def _texto_do_campo(qual, transacao):
@@ -176,9 +185,9 @@ def _executar_acao(pyautogui, pyperclip, pontos, acao, transacao):
         if teclas:
             pyautogui.hotkey(*teclas)
     elif tipo == "data_anterior":
-        digitos = _data_menos_um_digitos(transacao.descricao)
+        digitos = _data_anterior_digitos(transacao.descricao)
         if digitos:
-            pyautogui.write(digitos, interval=0.03)
+            pyautogui.write(digitos, interval=0.05)
     elif tipo == "clicar":
         ponto = _exigir_ponto(pontos, valor)
         pyautogui.click(ponto[0], ponto[1])

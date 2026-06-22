@@ -91,7 +91,7 @@ UPDATE_BRANCH = "main"
 TELECON_PONTOS = [
     "flechas", "transferir_de", "item_cartoes",
     "transferir_para", "item_banrisul",
-    "campo_data", "valor", "gravar",
+    "campo_data", "valor", "gravar", "confirmar_sim",
 ]
 
 # Nomes amigáveis mostrados na hora de calibrar cada ponto.
@@ -105,6 +105,7 @@ TELECON_PONTOS_NOMES = {
     "campo_data": "o campo DATA — clique EM CIMA DO DIA (os 2 primeiros números)",
     "valor": "o campo VALOR (onde aparece 0,00)",
     "gravar": "o botão GRAVAR",
+    "confirmar_sim": "o botão SIM na pergunta de confirmação da transferência",
 }
 
 # MACRO repetida para CADA PIX (Transferência CARTÕES A RECEBER -> BANRISUL).
@@ -123,16 +124,24 @@ TELECON_MACRO = [
     ("esperar", 0.4),
     ("clicar", "item_banrisul"),    # escolhe BANRISUL
     ("esperar", 0.3),
-    ("clicar", "campo_data"),       # foca a DATA no segmento do DIA
-    ("data_anterior", ""),          # digita (data do extrato - 1 dia)
+    ("clicar", "campo_data"),       # foca a DATA
+    ("tecla", "home"),              # vai para o início (segmento do dia)
+    ("data_anterior", ""),          # digita a data (1 dia antes — ver TELECON_DATA_BASE)
     ("esperar", 0.2),
     ("clicar", "valor"),            # foca o campo do valor
     ("hotkey", "ctrl+a"),           # seleciona o 0,00 que está lá
     ("campo", "valor"),             # escreve o valor do PIX (substitui)
     ("esperar", 0.2),
-    ("clicar", "gravar"),           # grava (a janela fecha)
-    ("esperar", 1.1),               # espera fechar antes do próximo
+    ("clicar", "gravar"),           # grava
+    ("esperar", 0.7),               # espera a pergunta de confirmação aparecer
+    ("clicar", "confirmar_sim"),    # responde SIM na confirmação
+    ("esperar", 1.1),               # espera fechar tudo antes do próximo PIX
 ]
+
+# Qual data o robô digita na transferência (sempre 1 dia ANTES):
+#   "hoje"    -> a data de HOJE menos 1 dia (ex.: hoje 22 -> lança 21) [padrão]
+#   "extrato" -> a data da linha do extrato menos 1 dia
+TELECON_DATA_BASE = "hoje"
 
 # Como o valor é digitado:  "1234,56" | "1.234,56" | "1234.56"
 TELECON_FORMATO_VALOR = "1234,56"
