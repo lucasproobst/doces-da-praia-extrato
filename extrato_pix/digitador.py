@@ -154,6 +154,15 @@ def _escrever(pyautogui, pyperclip, texto):
         pyautogui.hotkey("ctrl", "v")
 
 
+def _exigir_ponto(pontos, nome):
+    ponto = pontos.get(nome)
+    if not ponto:
+        raise RoboIndisponivelError(
+            f"O ponto '{nome}' ainda não foi calibrado. Use 'Calibrar' antes de lançar."
+        )
+    return ponto
+
+
 def _executar_acao(pyautogui, pyperclip, pontos, acao, transacao):
     tipo, valor = acao
     if tipo == "campo":
@@ -171,13 +180,11 @@ def _executar_acao(pyautogui, pyperclip, pontos, acao, transacao):
         if digitos:
             pyautogui.write(digitos, interval=0.03)
     elif tipo == "clicar":
-        ponto = pontos.get(valor)
-        if not ponto:
-            raise RoboIndisponivelError(
-                f"O ponto '{valor}' ainda não foi calibrado. "
-                "Use 'Calibrar' antes de lançar."
-            )
+        ponto = _exigir_ponto(pontos, valor)
         pyautogui.click(ponto[0], ponto[1])
+    elif tipo == "duplo_clicar":
+        ponto = _exigir_ponto(pontos, valor)
+        pyautogui.doubleClick(ponto[0], ponto[1])
     elif tipo == "scroll":
         pyautogui.scroll(int(valor))
     elif tipo == "esperar":

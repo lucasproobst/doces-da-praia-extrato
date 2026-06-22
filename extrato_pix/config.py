@@ -113,7 +113,7 @@ TELECON_PONTOS_NOMES = {
 #
 # "data_anterior" digita a data do extrato MENOS 1 DIA (ex.: extrato 22/06 -> 21/06).
 TELECON_MACRO = [
-    ("clicar", "flechas"),          # abre "Transferência entre Contas"
+    ("duplo_clicar", "flechas"),    # 2 cliques no botão do meio -> abre a transferência
     ("esperar", 0.9),
     ("clicar", "transferir_de"),    # abre dropdown da conta de ORIGEM
     ("esperar", 0.4),
