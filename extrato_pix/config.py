@@ -86,37 +86,44 @@ UPDATE_BRANCH = "main"
 
 # Pontos que você vai calibrar (ensinar a posição na tela). Liste aqui só os
 # que a sua MACRO usa em ("clicar", "..."). As posições são gravadas pelo app.
-TELECON_PONTOS = ["flechas", "gravar"]
+TELECON_PONTOS = ["flechas", "transferir_para", "item_banrisul", "valor", "gravar"]
 
 # Nomes amigáveis mostrados na hora de calibrar cada ponto.
 TELECON_PONTOS_NOMES = {
-    "flechas": "o ÍCONE DE FLECHAS (o do meio), em 'cartões a receber'",
+    "flechas": "o ÍCONE DE FLECHAS (transferência) na linha CARTÕES A RECEBER",
+    "transferir_para": "o campo 'Transferir para' (clique na SETINHA do dropdown)",
+    "item_banrisul": "a opção BANRISUL na lista que abre do dropdown",
+    "valor": "o campo VALOR (onde aparece 0,00)",
     "gravar": "o botão GRAVAR",
-    "campo_data": "o campo da DATA",
-    "campo_valor": "o campo do VALOR",
-    "conta": "o campo/seta da CONTA (BANRISUL)",
 }
 
-# MACRO repetida para CADA PIX. Ações possíveis (tuplas):
-#   ("clicar", "flechas")   -> clica num ponto calibrado
-#   ("scroll", -500)        -> rola a tela (negativo = para baixo)
-#   ("campo", "data")       -> escreve a data do PIX (extraída da linha)
-#   ("campo", "valor")      -> escreve o valor do PIX
-#   ("texto", "BANRISUL")   -> escreve um texto fixo
-#   ("tecla", "tab")        -> aperta uma tecla (tab, enter, down, esc, ...)
-#   ("esperar", 0.6)        -> espera X segundos (telas lentas)
+# MACRO repetida para CADA PIX (fluxo de Transferência entre Contas):
+#   ("clicar", "nome")    -> clica num ponto calibrado
+#   ("hotkey", "ctrl+a")  -> combinação de teclas (ex.: selecionar tudo)
+#   ("tecla", "tab")      -> aperta uma tecla (tab, enter, esc, ...)
+#   ("campo", "valor")    -> escreve o valor do PIX
+#   ("campo", "data")     -> escreve a data do PIX (extraída da linha)
+#   ("texto", "ABC")      -> escreve um texto fixo
+#   ("scroll", -500)      -> rola a tela (negativo = para baixo)
+#   ("esperar", 0.6)      -> espera X segundos
 #
-# >>> PLACEHOLDER: vamos confirmar a ordem/Tabs exatos com as suas imagens.
-#     (Assume que, ao abrir, o foco já cai no campo DATA; ajuste se não cair.)
+# Observações deste fluxo:
+#   - "Transferir de" já vem como CARTÕES A RECEBER (porque abrimos pela linha).
+#   - A DATA fica no padrão do sistema (não mexemos). Se precisar digitar a data
+#     do PIX, acrescente ("clicar","campo_data") + ("campo","data") e calibre.
 TELECON_MACRO = [
-    ("clicar", "flechas"),
-    ("esperar", 0.7),
-    ("campo", "data"),       # foco inicial no campo de data
-    ("tecla", "tab"),        # -> conta (BANRISUL já vem selecionada: confere)
-    ("tecla", "tab"),        # -> campo do valor
-    ("campo", "valor"),
-    ("clicar", "gravar"),
-    ("esperar", 0.9),        # espera a tela fechar/reabrir
+    ("clicar", "flechas"),          # abre "Transferência entre Contas"
+    ("esperar", 0.8),
+    ("clicar", "transferir_para"),  # abre o dropdown da conta de destino
+    ("esperar", 0.4),
+    ("clicar", "item_banrisul"),    # escolhe BANRISUL
+    ("esperar", 0.3),
+    ("clicar", "valor"),            # foca o campo do valor
+    ("hotkey", "ctrl+a"),           # seleciona o 0,00 que está lá
+    ("campo", "valor"),             # escreve o valor do PIX (substitui)
+    ("esperar", 0.2),
+    ("clicar", "gravar"),           # grava (a janela fecha)
+    ("esperar", 1.0),               # espera fechar antes do próximo
 ]
 
 # Como o valor é digitado:  "1234,56" | "1.234,56" | "1234.56"

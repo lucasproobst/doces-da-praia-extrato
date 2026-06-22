@@ -143,6 +143,10 @@ def _executar_acao(pyautogui, pyperclip, pontos, acao, transacao):
         _escrever(pyautogui, pyperclip, str(valor))
     elif tipo == "tecla":
         pyautogui.press(str(valor).lower())
+    elif tipo == "hotkey":
+        teclas = [t.strip().lower() for t in str(valor).replace("+", ",").split(",") if t.strip()]
+        if teclas:
+            pyautogui.hotkey(*teclas)
     elif tipo == "clicar":
         ponto = pontos.get(valor)
         if not ponto:
