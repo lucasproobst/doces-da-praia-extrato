@@ -96,8 +96,8 @@ TELECON_PONTOS = [
 
 # Nomes amigáveis mostrados na hora de calibrar cada ponto.
 TELECON_PONTOS_NOMES = {
-    "flechas": "o ÍCONE DE FLECHAS de uma conta SEMPRE VISÍVEL no topo "
-               "(ex.: EMPRESA LUCAS PROBST) — assim não precisa rolar",
+    "flechas": "o BOTÃO DO MEIO (as flechas de transferência) numa linha do "
+               "TOPO, sempre visível (ex.: a 1ª conta) — não precisa rolar",
     "transferir_de": "o campo 'Transferir de' (clique na SETINHA do dropdown)",
     "item_cartoes": "a opção CARTÕES A RECEBER na lista que abre do 'Transferir de'",
     "transferir_para": "o campo 'Transferir para' (clique na SETINHA do dropdown)",
