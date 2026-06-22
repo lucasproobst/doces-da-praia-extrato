@@ -8,6 +8,33 @@ O parser é **modular e ajustável**: se o seu banco usar um formato diferente,
 você consegue adaptar editando um único arquivo (`extrato_pix/config.py`),
 sem precisar mexer no resto do código.
 
+O programa também **se atualiza sozinho** pelo GitHub: toda mudança publicada no
+repositório é baixada automaticamente quando o usuário abre o aplicativo.
+
+📦 Repositório: **https://github.com/lucasproobst/doces-da-praia-extrato**
+
+---
+
+## ⭐ Instalação recomendada (com atualização automática)
+
+Esta é a forma indicada para o **uso no dia a dia**: instala uma vez e, a cada
+vez que abrir, o programa pega sozinho a última versão publicada no GitHub.
+
+**No computador Windows:**
+
+1. Baixe o projeto:
+   `https://github.com/lucasproobst/doces-da-praia-extrato` → botão verde
+   **Code → Download ZIP**.
+2. **Extraia** o ZIP numa pasta fixa (ex.: em *Documentos*) — é onde o programa
+   vai ficar e se atualizar.
+3. Dê **duplo clique em `INSTALAR.bat`**. Ele instala o Python (se faltar),
+   prepara tudo e cria o atalho **“Doces da Praia”** na Área de Trabalho.
+4. Pronto. Abra pelo atalho. Sempre que você publicar uma melhoria aqui, ela
+   chega sozinha na próxima vez que o programa for aberto. ✅
+
+> Como atualizar “lá” depois: é só eu/você **publicar a mudança no GitHub**
+> (`git push`). Nada precisa ser reenviado nem reinstalado.
+
 ---
 
 ## 📑 Índice
@@ -39,6 +66,38 @@ sem precisar mexer no resto do código.
 > Quando há mais de um número na linha (ex.: valor da transação **e** saldo),
 > o programa usa o **primeiro** por padrão — normalmente é o valor da transação.
 > Isso é configurável (veja a seção de ajustes).
+
+---
+
+## 🔄 Atualização automática (como funciona)
+
+- Ao abrir, o programa pergunta ao GitHub se há uma versão mais nova (compara o
+  último *commit*). Se houver, **baixa e troca os arquivos sozinho** e oferece
+  reabrir para aplicar. Sem internet, ele simplesmente abre normal.
+- Funciona ao rodar **da fonte** (instalação via `INSTALAR.bat`). No `.exe`
+  empacotado o código fica embutido, então lá o auto-update fica desligado.
+- Se uma atualização trouxer **dependências novas**, elas são instaladas sozinhas.
+- Liga/desliga e aponta o repositório em `extrato_pix/config.py`
+  (`UPDATE_ATIVO`, `UPDATE_REPO`).
+
+**Dois jeitos de distribuir:**
+
+| | `INSTALAR.bat` (recomendado) | `GERAR_INSTALADOR.bat` (.exe) |
+|---|---|---|
+| Atualiza sozinho | ✅ Sim, pelo GitHub | ❌ Não (gerar de novo) |
+| Precisa de Python no PC | Sim (instala sozinho) | Não (vira .exe) |
+| Ideal para | **seu uso / quem edita** | entregar a terceiros |
+
+---
+
+## 🪵 Onde ficam os logs
+
+- **Programa:** `%LOCALAPPDATA%\DocesDaPraia\doces_da_praia.log`
+  (registra aberturas, processamentos e erros com detalhe técnico).
+- **Instalação:** `install_log.txt` / `build_log.txt`, criados na pasta do
+  projeto quando você roda o `INSTALAR.bat` / `GERAR_INSTALADOR.bat`.
+
+Se algo der errado, abra esses arquivos — eles dizem o motivo.
 
 ---
 
