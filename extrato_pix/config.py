@@ -75,6 +75,9 @@ APENAS_CREDITOS = True
 UPDATE_ATIVO = True
 UPDATE_REPO = "lucasproobst/doces-da-praia-extrato"  # usuario/repositorio
 UPDATE_BRANCH = "main"
+# De quanto em quanto tempo (segundos) o app verifica atualizações enquanto
+# está aberto — assim você não precisa fechar e abrir para atualizar.
+UPDATE_INTERVALO_SEGUNDOS = 120
 
 # ---------------------------------------------------------------------------
 # 7) LANÇAR NO TELECON (robô — digitação automática)

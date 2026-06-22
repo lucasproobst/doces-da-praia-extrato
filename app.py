@@ -16,6 +16,7 @@ Para rodar:   python app.py
 import os
 import sys
 import threading
+import time
 
 # ---------------------------------------------------------------------------
 # Importação da biblioteca de interface (customtkinter). Se ela não estiver
@@ -75,6 +76,8 @@ class AppExtrato(ctk.CTk):
         # Estado interno
         self.resultado = None        # último resultado processado
         self.caminho_atual = None    # caminho do arquivo carregado
+        self._ocupado = False        # True enquanto lança no Telecon
+        self._update_pendente = False  # já baixou atualização aguardando reinício
 
         # Configuração da janela ------------------------------------------------
         ctk.set_appearance_mode("light")
@@ -97,8 +100,8 @@ class AppExtrato(ctk.CTk):
         self._atualizar_total(0.0, 0)
         self._definir_status("Pronto. Clique em “Selecionar extrato” para começar.")
 
-        # Verifica se há uma versão nova no GitHub (em segundo plano).
-        threading.Thread(target=self._verificar_atualizacao, daemon=True).start()
+        # Verifica atualizações periodicamente, em segundo plano (sem fechar/abrir).
+        threading.Thread(target=self._loop_atualizacao, daemon=True).start()
 
     # =======================================================================
     # ÍCONE
@@ -142,9 +145,25 @@ class AppExtrato(ctk.CTk):
         )
         subtitulo.grid(row=1, column=1, sticky="nw", padx=2, pady=(0, 18))
 
-        # Botão de alternar tema (claro/escuro) à direita
+        # Botões à direita (atualizar + alternar tema)
+        acoes_dir = ctk.CTkFrame(cabecalho, fg_color="transparent")
+        acoes_dir.grid(row=0, column=2, rowspan=2, padx=24)
+
+        self.botao_atualizar = ctk.CTkButton(
+            acoes_dir,
+            text="🔄  Atualizar",
+            width=110,
+            height=32,
+            fg_color="#0B5B54",
+            hover_color="#0A4F49",
+            text_color=BRANCO,
+            font=ctk.CTkFont(size=12),
+            command=self._atualizar_agora,
+        )
+        self.botao_atualizar.grid(row=0, column=0, padx=(0, 8))
+
         self.botao_tema = ctk.CTkButton(
-            cabecalho,
+            acoes_dir,
             text="🌙  Tema escuro",
             width=130,
             height=32,
@@ -154,7 +173,7 @@ class AppExtrato(ctk.CTk):
             font=ctk.CTkFont(size=12),
             command=self._alternar_tema,
         )
-        self.botao_tema.grid(row=0, column=2, rowspan=2, padx=24)
+        self.botao_tema.grid(row=0, column=1)
 
     # =======================================================================
     # CORPO
@@ -563,7 +582,7 @@ class AppExtrato(ctk.CTk):
         total = self.resultado.quantidade
         janela = ctk.CTkToplevel(self)
         janela.title("Lançar no Telecon")
-        janela.geometry("560x430")
+        janela.geometry("560x500")
         janela.transient(self)
         janela.after(50, janela.lift)
         janela.after(80, janela.grab_set)
@@ -589,6 +608,21 @@ class AppExtrato(ctk.CTk):
             janela, text=instrucoes, justify="left",
             font=ctk.CTkFont(size=13), text_color=TEXTO,
         ).pack(padx=24, pady=4, anchor="w")
+
+        # Campo do DIA do lançamento (padrão = ontem; mude se quiser outra data)
+        linha_dia = ctk.CTkFrame(janela, fg_color="transparent")
+        linha_dia.pack(pady=(6, 2))
+        ctk.CTkLabel(
+            linha_dia, text="Dia do lançamento:", font=ctk.CTkFont(size=13),
+        ).grid(row=0, column=0, padx=(0, 8))
+        self._entry_dia = ctk.CTkEntry(linha_dia, width=70, justify="center",
+                                       font=ctk.CTkFont(size=15, weight="bold"))
+        self._entry_dia.insert(0, digitador.dia_padrao())
+        self._entry_dia.grid(row=0, column=1)
+        ctk.CTkLabel(
+            linha_dia, text="(padrão = ontem; muda só o dia)",
+            font=ctk.CTkFont(size=11), text_color=TEXTO_SUAVE,
+        ).grid(row=0, column=2, padx=(8, 0))
 
         # Status de calibração + botão de calibrar
         faltando = digitador.pontos_faltando()
@@ -632,6 +666,13 @@ class AppExtrato(ctk.CTk):
         ).grid(row=0, column=2, padx=6)
 
     def _preparar_lancamento(self, janela, transacoes):
+        # Lê o dia escolhido (se vazio ou igual ao padrão, segue automático/ontem).
+        try:
+            dia = self._entry_dia.get().strip()
+        except Exception:
+            dia = ""
+        digitador.definir_dia_override(dia if dia else None)
+
         if digitador.pontos_faltando():
             janela.destroy()
             messagebox.showwarning(
@@ -763,6 +804,7 @@ class AppExtrato(ctk.CTk):
         )
 
     def _travar_botoes(self, travar):
+        self._ocupado = travar  # evita que a atualização interrompa um lançamento
         estado = "disabled" if travar else "normal"
         self.botao_selecionar.configure(state="disabled" if travar else "normal")
         self.botao_exportar.configure(state=estado)
@@ -805,31 +847,63 @@ class AppExtrato(ctk.CTk):
     # =======================================================================
     # ATUALIZAÇÃO AUTOMÁTICA (via GitHub)
     # =======================================================================
-    def _verificar_atualizacao(self):
-        """Roda em segundo plano: se houver versão nova, baixa e oferece reabrir."""
+    def _loop_atualizacao(self):
+        """Verifica atualizações de tempos em tempos, enquanto o app está aberto."""
+        while True:
+            # não atrapalha durante um lançamento no Telecon
+            if not self._ocupado and not self._update_pendente:
+                try:
+                    if self._checar_e_aplicar(manual=False):
+                        return  # atualização baixada; aguardando reinício
+                except Exception:
+                    log.exception("Falha na verificação periódica de atualização")
+            time.sleep(max(30, int(config.UPDATE_INTERVALO_SEGUNDOS)))
+
+    def _atualizar_agora(self):
+        """Botão '🔄 Atualizar': verifica e aplica na hora."""
+        self._definir_status("Verificando atualizações…")
+        threading.Thread(
+            target=lambda: self._checar_e_aplicar(manual=True), daemon=True
+        ).start()
+
+    def _checar_e_aplicar(self, manual=False):
+        """Consulta o GitHub; se houver versão nova, baixa e oferece reiniciar.
+        Retorna True se uma atualização foi baixada."""
         sha = atualizador.verificar()
         if not sha:
-            return
+            if manual:
+                self.after(0, lambda: self._definir_status(
+                    "✓ Você já está na versão mais recente."
+                ))
+            return False
         self.after(0, lambda: self._definir_status("Baixando atualização…"))
         if atualizador.aplicar(sha):
+            self._update_pendente = True
             self.after(0, self._oferecer_reinicio)
-        else:
+            return True
+        if manual:
             self.after(0, lambda: self._definir_status(
-                "Não foi possível atualizar agora. Tentaremos na próxima vez."
+                "Não foi possível atualizar agora. Tentaremos de novo."
             ))
+        return False
 
     def _oferecer_reinicio(self):
-        self._definir_status("✓ Atualização instalada.")
+        self._definir_status("✓ Atualização baixada.")
         reabrir = messagebox.askyesno(
             "Atualização disponível",
-            "Uma versão mais nova do programa foi instalada.\n\n"
-            "Deseja reabrir agora para aplicar as novidades?",
+            "Uma versão mais nova foi baixada! 🎉\n\n"
+            "Reiniciar agora para aplicar? (leva uns 2 segundos e o programa "
+            "reabre sozinho)",
             parent=self,
         )
         if reabrir:
             log.info("Reiniciando para aplicar atualização.")
             self.destroy()
             atualizador.reiniciar()
+        else:
+            self._definir_status(
+                "Atualização pronta — será aplicada quando você reabrir o programa."
+            )
 
 
 def _executar_cli(argumentos):

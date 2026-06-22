@@ -116,6 +116,25 @@ def _extrair_data(descricao):
     return achado.group(1) if achado else ""
 
 
+# Dia escolhido manualmente pelo usuário (sobrepõe o cálculo). None = automático.
+_dia_override = None
+
+
+def definir_dia_override(valor):
+    """Define um DIA específico para digitar (ex.: '21'). None/'' = automático
+    (dia anterior). Mantém só os números; completa para 2 dígitos."""
+    global _dia_override
+    digitos = "".join(c for c in str(valor) if c.isdigit()) if valor else ""
+    if len(digitos) == 1:
+        digitos = "0" + digitos
+    _dia_override = digitos or None
+
+
+def dia_padrao():
+    """Dia padrão a sugerir no app: o dia de ONTEM (hoje - 1), com 2 dígitos."""
+    return (datetime.now() - timedelta(days=1)).strftime("%d")
+
+
 def _data_anterior_digitos(descricao):
     """Data a ser digitada (sempre 1 dia ANTES), só com dígitos (ddmmaaaa).
 
@@ -187,9 +206,12 @@ def _executar_acao(pyautogui, pyperclip, pontos, acao, transacao):
         if teclas:
             pyautogui.hotkey(*teclas)
     elif tipo == "data_anterior":
-        digitos = _data_anterior_digitos(transacao.descricao)
-        if digitos and TELECON_DATA_MODO == "dia":
-            digitos = digitos[:2]   # só o DIA (mês/ano ficam como estão)
+        if _dia_override:
+            digitos = _dia_override            # dia escolhido pelo usuário
+        else:
+            digitos = _data_anterior_digitos(transacao.descricao)
+            if digitos and TELECON_DATA_MODO == "dia":
+                digitos = digitos[:2]          # só o DIA (mês/ano ficam como estão)
         if digitos:
             # digita número por número, devagar, para o campo não se perder
             for caractere in digitos:
