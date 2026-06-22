@@ -77,43 +77,58 @@ UPDATE_REPO = "lucasproobst/doces-da-praia-extrato"  # usuario/repositorio
 UPDATE_BRANCH = "main"
 
 # ---------------------------------------------------------------------------
-# 7) LANÇAR NO TELECON (digitação automática / robô)
+# 7) LANÇAR NO TELECON (robô — digitação automática)
 # ---------------------------------------------------------------------------
-# O robô preenche a tela de "novo lançamento" do Telecon para CADA PIX.
-# Ajuste a SEQUÊNCIA abaixo para bater com a ORDEM DOS CAMPOS do seu Telecon.
+# No Telecon, cada PIX exige: clicar no ícone de flechas -> digitar data ->
+# conta BANRISUL -> digitar o valor -> Gravar (e a tela fecha, repetindo tudo).
+# Como há CLIQUES em ícones, o robô usa "pontos calibrados": você ENSINA uma
+# vez onde fica cada ponto (botão "Calibrar" no app), e ele repete sozinho.
+
+# Pontos que você vai calibrar (ensinar a posição na tela). Liste aqui só os
+# que a sua MACRO usa em ("clicar", "..."). As posições são gravadas pelo app.
+TELECON_PONTOS = ["flechas", "gravar"]
+
+# Nomes amigáveis mostrados na hora de calibrar cada ponto.
+TELECON_PONTOS_NOMES = {
+    "flechas": "o ÍCONE DE FLECHAS (o do meio), em 'cartões a receber'",
+    "gravar": "o botão GRAVAR",
+    "campo_data": "o campo da DATA",
+    "campo_valor": "o campo do VALOR",
+    "conta": "o campo/seta da CONTA (BANRISUL)",
+}
+
+# MACRO repetida para CADA PIX. Ações possíveis (tuplas):
+#   ("clicar", "flechas")   -> clica num ponto calibrado
+#   ("scroll", -500)        -> rola a tela (negativo = para baixo)
+#   ("campo", "data")       -> escreve a data do PIX (extraída da linha)
+#   ("campo", "valor")      -> escreve o valor do PIX
+#   ("texto", "BANRISUL")   -> escreve um texto fixo
+#   ("tecla", "tab")        -> aperta uma tecla (tab, enter, down, esc, ...)
+#   ("esperar", 0.6)        -> espera X segundos (telas lentas)
 #
-# Cada item é uma AÇÃO (uma tupla):
-#   ("campo", "valor")     -> escreve o VALOR do PIX
-#   ("campo", "descricao") -> escreve a descrição (o texto da linha do extrato)
-#   ("campo", "data")      -> escreve a data encontrada na linha (se houver)
-#   ("texto", "QUALQUER")  -> escreve um texto fixo (ex.: uma categoria/conta)
-#   ("tecla", "tab")       -> aperta Tab     (mudar de campo)
-#   ("tecla", "enter")     -> aperta Enter   (confirmar/salvar)
-#   ("tecla", "f2")        -> aperta uma tecla (f2, esc, down, etc.)
-#   ("esperar", 0.3)       -> espera X segundos (use se a tela for lenta)
-#
-# >>> EXEMPLO (AJUSTE para o seu caso!): digita o valor, Tab, a descrição, Enter
-TELECON_SEQUENCIA = [
+# >>> PLACEHOLDER: vamos confirmar a ordem/Tabs exatos com as suas imagens.
+#     (Assume que, ao abrir, o foco já cai no campo DATA; ajuste se não cair.)
+TELECON_MACRO = [
+    ("clicar", "flechas"),
+    ("esperar", 0.7),
+    ("campo", "data"),       # foco inicial no campo de data
+    ("tecla", "tab"),        # -> conta (BANRISUL já vem selecionada: confere)
+    ("tecla", "tab"),        # -> campo do valor
     ("campo", "valor"),
-    ("tecla", "tab"),
-    ("campo", "descricao"),
-    ("tecla", "enter"),
+    ("clicar", "gravar"),
+    ("esperar", 0.9),        # espera a tela fechar/reabrir
 ]
 
-# Como o valor deve ser escrito no Telecon:
-#   "1234,56"   -> sem ponto de milhar, vírgula decimal (mais comum p/ digitar)
-#   "1.234,56"  -> com ponto de milhar
-#   "1234.56"   -> ponto decimal (padrão americano)
+# Como o valor é digitado:  "1234,56" | "1.234,56" | "1234.56"
 TELECON_FORMATO_VALOR = "1234,56"
 
-# Forma de preencher cada campo:
-#   "colar"   -> usa Ctrl+V (RÁPIDO e aceita acentos) — recomendado
-#   "digitar" -> digita tecla por tecla (use se o Telecon não aceitar colar)
+# Forma de preencher campos de texto:
+#   "colar"   -> Ctrl+V (rápido, aceita acento) — recomendado
+#   "digitar" -> tecla por tecla
 TELECON_METODO = "colar"
 
-# Velocidades (em segundos). Diminua para ir mais rápido; aumente se o
-# Telecon "perder" caracteres.
-TELECON_PAUSA_TECLA = 0.0       # pausa entre teclas (só no modo "digitar")
-TELECON_PAUSA_ENTRE_ACOES = 0.05  # pausa entre uma ação e a próxima
-TELECON_PAUSA_ENTRE_LANCAMENTOS = 0.2  # pausa entre um PIX e o próximo
-TELECON_CONTAGEM_REGRESSIVA = 5  # segundos antes de começar (p/ clicar no Telecon)
+# Velocidades (segundos). Aumente se o Telecon "perder" cliques/caracteres.
+TELECON_PAUSA_TECLA = 0.0
+TELECON_PAUSA_ENTRE_ACOES = 0.08
+TELECON_PAUSA_ENTRE_LANCAMENTOS = 0.3
+TELECON_CONTAGEM_REGRESSIVA = 5

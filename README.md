@@ -101,29 +101,36 @@ Se algo der errado, abra esses arquivos — eles dizem o motivo.
 
 ---
 
-## ⌨️ Lançar no Telecon (digitação automática)
+## ⌨️ Lançar no Telecon (robô de digitação)
 
-Como o Telecon só aceita **digitação manual**, o app traz um **robô** que digita
-cada PIX na tela de novo lançamento, por você.
+Como no Telecon cada PIX exige clicar no ícone de flechas → data → conta
+BANRISUL → valor → Gravar (e a tela fecha), o app traz um **robô** que repete
+isso sozinho. Ele usa **pontos calibrados**: você ensina UMA vez onde ficam os
+cliques, e ele replica para cada PIX.
 
-**Como usar:**
-1. Processe o extrato no app.
-2. Abra o **Telecon** na tela de **novo lançamento** (cursor no primeiro campo).
-3. No app, clique em **“Lançar no Telecon”** → escolha **Testar com 1** (recomendado
-   na primeira vez) ou **Lançar todos**.
-4. Durante a **contagem regressiva**, clique na janela do Telecon. O robô preenche
-   sozinho, bem rápido.
-5. **Abortar a qualquer momento:** jogue o **mouse para o canto superior esquerdo**
-   da tela.
+**1) Calibrar (só na primeira vez):**
+1. Abra o Telecon na tela de **cartões a receber**.
+2. No app: **“Lançar no Telecon” → 📍 Calibrar pontos**.
+3. Para cada ponto pedido (ícone de flechas, botão Gravar…), **passe o mouse**
+   sobre o alvo (sem clicar) e aperte **ESPAÇO**. As posições ficam salvas.
 
-**Ajuste para a SUA tela do Telecon** (em `extrato_pix/config.py`, seção 7):
-- `TELECON_SEQUENCIA` — a ordem dos campos (ex.: valor → Tab → descrição → Enter).
-- `TELECON_FORMATO_VALOR` — como o valor é digitado (`1234,56`, `1.234,56` ou `1234.56`).
-- `TELECON_METODO` — `"colar"` (rápido, recomendado) ou `"digitar"`.
-- `TELECON_PAUSA_*` — velocidades (aumente se o Telecon “perder” caracteres).
+**2) Lançar:**
+1. Deixe o Telecon na tela de **cartões a receber**.
+2. No app: **“Lançar no Telecon” → 🧪 Testar com 1** (confira no Telecon!) e,
+   se ficou certo, **🚀 Lançar todos**.
+3. Durante a **contagem regressiva**, deixe o Telecon visível. O robô faz o
+   resto, bem rápido.
+4. **Abortar:** jogue o **mouse para o canto superior esquerdo** da tela.
 
-> ⚠️ É uma automação que **digita na tela**: depende da ordem dos campos do seu
-> Telecon. **Sempre teste com 1 lançamento** e confira antes de soltar a lista toda.
+**Ajuste para o SEU Telecon** (em `extrato_pix/config.py`, seção 7):
+- `TELECON_MACRO` — a sequência repetida por PIX (cliques, Tabs, campos).
+- `TELECON_PONTOS` — quais posições você calibra.
+- `TELECON_FORMATO_VALOR` — `1234,56` · `1.234,56` · `1234.56`.
+- `TELECON_PAUSA_*` — velocidades (aumente se o Telecon “perder” cliques).
+
+> ⚠️ É automação **na tela real**: depende do layout do seu Telecon e da janela
+> ficar no mesmo lugar. **Sempre teste com 1** e confira antes de lançar tudo.
+> Mudou a posição da janela? É só **calibrar de novo**.
 
 ---
 

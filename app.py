@@ -590,8 +590,25 @@ class AppExtrato(ctk.CTk):
             font=ctk.CTkFont(size=13), text_color=TEXTO,
         ).pack(padx=24, pady=4, anchor="w")
 
+        # Status de calibração + botão de calibrar
+        faltando = digitador.pontos_faltando()
+        ctk.CTkLabel(
+            janela,
+            text=("⚠️  Pontos não calibrados — clique em Calibrar primeiro."
+                  if faltando else "✓  Pontos já calibrados."),
+            font=ctk.CTkFont(size=12),
+            text_color=("#C0392B" if faltando else "#0F766E"),
+        ).pack(pady=(2, 2))
+
+        ctk.CTkButton(
+            janela, text="📍  Calibrar pontos (ensinar posições)",
+            width=320, height=40, corner_radius=12,
+            fg_color="#F59E0B", hover_color="#D97706", text_color=BRANCO,
+            command=lambda: (janela.destroy(), self._calibrar_telecon()),
+        ).pack(pady=(2, 8))
+
         botoes = ctk.CTkFrame(janela, fg_color="transparent")
-        botoes.pack(pady=16)
+        botoes.pack(pady=10)
 
         primeira = [self.resultado.transacoes[0]]
         todas = list(self.resultado.transacoes)
@@ -615,9 +632,82 @@ class AppExtrato(ctk.CTk):
         ).grid(row=0, column=2, padx=6)
 
     def _preparar_lancamento(self, janela, transacoes):
+        if digitador.pontos_faltando():
+            janela.destroy()
+            messagebox.showwarning(
+                "Calibrar primeiro",
+                "Antes de lançar, clique em “Calibrar pontos” para ensinar onde\n"
+                "ficam o ícone de flechas e o botão Gravar.",
+                parent=self,
+            )
+            self._calibrar_telecon()
+            return
         janela.destroy()
         self._travar_botoes(True)
         self._contagem_telecon(int(config.TELECON_CONTAGEM_REGRESSIVA), transacoes)
+
+    def _calibrar_telecon(self):
+        """Ensina ao robô a posição de cada ponto (mouse + ESPAÇO)."""
+        pontos = list(config.TELECON_PONTOS)
+        if not pontos:
+            messagebox.showinfo("Calibrar", "Não há pontos para calibrar.", parent=self)
+            return
+        nomes = config.TELECON_PONTOS_NOMES
+
+        win = ctk.CTkToplevel(self)
+        win.title("Calibrar Telecon")
+        win.geometry("580x300")
+        win.transient(self)
+        win.attributes("-topmost", True)
+        win.after(50, win.lift)
+        win.after(120, win.focus_force)
+
+        estado = {"i": 0}
+
+        titulo = ctk.CTkLabel(win, text="", font=ctk.CTkFont(size=16, weight="bold"))
+        titulo.pack(pady=(22, 6))
+        instr = ctk.CTkLabel(
+            win, text="", font=ctk.CTkFont(size=15), justify="center", wraplength=520
+        )
+        instr.pack(pady=10, padx=20)
+        ctk.CTkLabel(
+            win,
+            text="Passe o MOUSE sobre o alvo (sem clicar) e aperte a tecla ESPAÇO.\n"
+                 "(ESC cancela)",
+            font=ctk.CTkFont(size=12), text_color=TEXTO_SUAVE, justify="center",
+        ).pack(pady=10)
+
+        def mostrar():
+            nome = pontos[estado["i"]]
+            legivel = nomes.get(nome, nome)
+            titulo.configure(text=f"Ponto {estado['i'] + 1} de {len(pontos)}")
+            instr.configure(text=f"Posicione o mouse sobre:\n\n➡️  {legivel}")
+
+        def capturar(_evento=None):
+            nome = pontos[estado["i"]]
+            try:
+                x, y = digitador.posicao_atual_do_mouse()
+            except digitador.RoboIndisponivelError as erro:
+                win.destroy()
+                self._erro_telecon(str(erro))
+                return
+            digitador.salvar_ponto(nome, x, y)
+            estado["i"] += 1
+            if estado["i"] >= len(pontos):
+                win.destroy()
+                self._definir_status("✓ Telecon calibrado. Já pode lançar (teste com 1).")
+                messagebox.showinfo(
+                    "Calibração concluída",
+                    "Posições salvas!\n\nAgora abra o Telecon e use\n"
+                    "“Lançar no Telecon → Testar com 1” para conferir.",
+                    parent=self,
+                )
+                return
+            mostrar()
+
+        win.bind("<space>", capturar)
+        win.bind("<Escape>", lambda _e: win.destroy())
+        mostrar()
 
     def _contagem_telecon(self, segundos, transacoes):
         if segundos > 0:

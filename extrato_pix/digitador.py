@@ -2,32 +2,35 @@
 """
 Robô de digitação (RPA) para lançar os PIX no Telecon.
 
-Como o Telecon só aceita digitação manual, este módulo SIMULA o teclado:
-para cada PIX, ele preenche os campos da tela de "novo lançamento" seguindo a
-sequência definida em config.TELECON_SEQUENCIA.
+O Telecon, para cada PIX, exige: clicar no ícone de flechas -> digitar a data ->
+conta BANRISUL -> digitar o valor -> Gravar (a tela fecha e repete). Como há
+CLIQUES em ícones, o robô usa "pontos calibrados": o usuário ensina uma vez onde
+fica cada ponto (passando o mouse e apertando ESPAÇO), e o robô repete sozinho a
+MACRO (config.TELECON_MACRO) para cada transação.
 
 SEGURANÇA:
-  - Há uma contagem regressiva antes de começar (tempo de clicar no Telecon).
-  - "Botão de pânico": jogue o mouse para o CANTO SUPERIOR ESQUERDO da tela
-    para abortar na hora (recurso FAILSAFE do pyautogui).
-  - Sempre teste com 1 lançamento antes de soltar a lista inteira.
+  - Contagem regressiva antes de começar.
+  - "Botão de pânico": mouse no CANTO SUPERIOR ESQUERDO aborta na hora (FAILSAFE).
+  - Teste sempre com 1 lançamento antes de soltar a lista inteira.
 
-Observação: as bibliotecas pyautogui/pyperclip são importadas só quando o robô
-é usado, para não atrasar a abertura do programa.
+As libs pyautogui/pyperclip são importadas só quando o robô é usado.
 """
 
+import json
+import os
 import re
 import time
 
 from .config import (
     TELECON_FORMATO_VALOR,
+    TELECON_MACRO,
     TELECON_METODO,
     TELECON_PAUSA_ENTRE_ACOES,
     TELECON_PAUSA_ENTRE_LANCAMENTOS,
     TELECON_PAUSA_TECLA,
-    TELECON_SEQUENCIA,
+    TELECON_PONTOS,
 )
-from .registro import log
+from .registro import log, pasta_dados
 from .valores import formatar_numero_br
 
 _DATA_RE = re.compile(r"\b(\d{2}/\d{2}/\d{2,4})\b")
@@ -42,25 +45,66 @@ def _carregar_libs():
     try:
         import pyautogui
         import pyperclip
-    except Exception as erro:  # ImportError ou erro de display
+    except Exception as erro:
         raise RoboIndisponivelError(
             "As bibliotecas de automação não estão disponíveis.\n"
             "Rode novamente o INSTALAR.bat para instalar as dependências."
         ) from erro
     pyautogui.FAILSAFE = True   # mouse no canto superior esquerdo = abortar
-    pyautogui.PAUSE = 0          # controlamos as pausas manualmente
+    pyautogui.PAUSE = 0
     return pyautogui, pyperclip
 
 
 # ---------------------------------------------------------------------------
-# Conversões de cada campo em texto
+# Pontos calibrados (posições da tela), salvos entre sessões
+# ---------------------------------------------------------------------------
+def _arquivo_pontos():
+    return os.path.join(pasta_dados(), "telecon_pontos.json")
+
+
+def carregar_pontos():
+    try:
+        with open(_arquivo_pontos(), encoding="utf-8") as arquivo:
+            dados = json.load(arquivo)
+        # chaves -> tuplas (x, y)
+        return {nome: tuple(pos) for nome, pos in dados.items()}
+    except Exception:
+        return {}
+
+
+def salvar_ponto(nome, x, y):
+    pontos = carregar_pontos()
+    pontos[nome] = [int(x), int(y)]
+    try:
+        with open(_arquivo_pontos(), "w", encoding="utf-8") as arquivo:
+            json.dump(pontos, arquivo)
+        log.info("Ponto do Telecon calibrado: %s = (%d, %d)", nome, x, y)
+    except Exception:
+        log.exception("Não foi possível salvar o ponto calibrado")
+
+
+def pontos_faltando():
+    """Nomes de TELECON_PONTOS que ainda não foram calibrados."""
+    pontos = carregar_pontos()
+    return [nome for nome in TELECON_PONTOS if nome not in pontos]
+
+
+def posicao_atual_do_mouse():
+    """Posição atual do mouse (usada na calibração)."""
+    pyautogui, _ = _carregar_libs()
+    x, y = pyautogui.position()
+    return int(x), int(y)
+
+
+# ---------------------------------------------------------------------------
+# Conversão dos campos do PIX em texto
 # ---------------------------------------------------------------------------
 def _formatar_valor(valor):
     if TELECON_FORMATO_VALOR == "1.234,56":
-        return formatar_numero_br(valor)               # 1.234,56
+        return formatar_numero_br(valor)
     if TELECON_FORMATO_VALOR == "1234.56":
-        return f"{valor:.2f}"                            # 1234.56
-    return formatar_numero_br(valor).replace(".", "")   # 1234,56 (sem milhar)
+        return f"{valor:.2f}"
+    return formatar_numero_br(valor).replace(".", "")   # 1234,56
 
 
 def _extrair_data(descricao):
@@ -79,20 +123,19 @@ def _texto_do_campo(qual, transacao):
 
 
 # ---------------------------------------------------------------------------
-# Execução
+# Execução das ações
 # ---------------------------------------------------------------------------
 def _escrever(pyautogui, pyperclip, texto):
-    """Escreve um texto no campo atual (por colar ou digitar)."""
     if not texto:
         return
     if TELECON_METODO == "digitar":
         pyautogui.write(texto, interval=TELECON_PAUSA_TECLA)
-    else:  # "colar" (padrão): rápido e aceita acentos
+    else:
         pyperclip.copy(texto)
         pyautogui.hotkey("ctrl", "v")
 
 
-def _executar_acao(pyautogui, pyperclip, acao, transacao):
+def _executar_acao(pyautogui, pyperclip, pontos, acao, transacao):
     tipo, valor = acao
     if tipo == "campo":
         _escrever(pyautogui, pyperclip, _texto_do_campo(valor, transacao))
@@ -100,29 +143,31 @@ def _executar_acao(pyautogui, pyperclip, acao, transacao):
         _escrever(pyautogui, pyperclip, str(valor))
     elif tipo == "tecla":
         pyautogui.press(str(valor).lower())
+    elif tipo == "clicar":
+        ponto = pontos.get(valor)
+        if not ponto:
+            raise RoboIndisponivelError(
+                f"O ponto '{valor}' ainda não foi calibrado. "
+                "Use 'Calibrar' antes de lançar."
+            )
+        pyautogui.click(ponto[0], ponto[1])
+    elif tipo == "scroll":
+        pyautogui.scroll(int(valor))
     elif tipo == "esperar":
         time.sleep(float(valor))
     else:
-        log.warning("Ação desconhecida na sequência do Telecon: %r", acao)
-
-
-def lancar_um(transacao):
-    """Lança UMA transação (assume que o Telecon já está na tela certa)."""
-    pyautogui, pyperclip = _carregar_libs()
-    for acao in TELECON_SEQUENCIA:
-        _executar_acao(pyautogui, pyperclip, acao, transacao)
-        if TELECON_PAUSA_ENTRE_ACOES:
-            time.sleep(TELECON_PAUSA_ENTRE_ACOES)
+        log.warning("Ação desconhecida na macro do Telecon: %r", acao)
 
 
 def lancar_varios(transacoes, parar_evento=None, ao_progredir=None):
-    """Lança uma lista de transações, uma após a outra.
+    """Lança uma lista de transações repetindo a MACRO para cada uma.
 
     parar_evento : threading.Event opcional; se .is_set(), interrompe.
     ao_progredir : função opcional chamada como ao_progredir(indice, total).
     Retorna a quantidade efetivamente lançada.
     """
     pyautogui, pyperclip = _carregar_libs()
+    pontos = carregar_pontos()
     total = len(transacoes)
     feitos = 0
     try:
@@ -130,8 +175,8 @@ def lancar_varios(transacoes, parar_evento=None, ao_progredir=None):
             if parar_evento is not None and parar_evento.is_set():
                 log.info("Lançamento interrompido pelo usuário em %d/%d.", feitos, total)
                 break
-            for acao in TELECON_SEQUENCIA:
-                _executar_acao(pyautogui, pyperclip, acao, transacao)
+            for acao in TELECON_MACRO:
+                _executar_acao(pyautogui, pyperclip, pontos, acao, transacao)
                 if TELECON_PAUSA_ENTRE_ACOES:
                     time.sleep(TELECON_PAUSA_ENTRE_ACOES)
             feitos += 1
@@ -139,8 +184,10 @@ def lancar_varios(transacoes, parar_evento=None, ao_progredir=None):
                 ao_progredir(indice, total)
             if TELECON_PAUSA_ENTRE_LANCAMENTOS:
                 time.sleep(TELECON_PAUSA_ENTRE_LANCAMENTOS)
+    except RoboIndisponivelError:
+        raise
     except Exception:
-        # FailSafe (mouse no canto) cai aqui também — abortar é esperado.
+        # FailSafe (mouse no canto) também cai aqui — abortar é esperado.
         log.exception("Lançamento automático interrompido (erro ou botão de pânico).")
     log.info("Lançados %d de %d no Telecon.", feitos, total)
     return feitos
