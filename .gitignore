@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Inno Setup
+instalador/
+
+# Logs
+build_log.txt
+install_log.txt
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db

@@ -1,0 +1,22 @@
+# Dependências do "Doces da Praia - Calcular Extrato"
+# Instale tudo com:  pip install -r requirements.txt
+
+# Interface gráfica moderna
+customtkinter>=5.2.2
+
+# Leitura de PDF
+pdfplumber>=0.11.0
+
+# Planilhas e CSV
+pandas>=2.0.0
+openpyxl>=3.1.0      # leitura e escrita de .xlsx
+xlrd>=2.0.1          # leitura de .xls (formato antigo)
+
+# Exportação em PDF
+fpdf2>=2.7.6
+
+# Geração do ícone do aplicativo (usado por make_icon.py)
+Pillow>=10.0.0
+
+# Empacotamento em .exe (necessário apenas para gerar o executável)
+pyinstaller>=6.3.0
